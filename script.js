@@ -75,6 +75,13 @@
 
     let activeDepartment = "all";
     let activeRoom = "all";
+    const departmentValues = new Set(
+      departmentButtons.map((button) => button.dataset.filterValue || "all")
+    );
+    const roomValues = new Set(roomButtons.map((button) => button.dataset.filterValue || "all"));
+    const roomAliases = {
+      "kitchen-room": "kitchen",
+    };
 
     const getActiveLabel = (buttons, value, fallback) => {
       const activeButton = buttons.find((button) => button.dataset.filterValue === value);
@@ -130,11 +137,38 @@
       }
     };
 
+    const syncHashWithState = () => {
+      const nextHash =
+        activeRoom !== "all"
+          ? activeRoom
+          : activeDepartment !== "all"
+            ? activeDepartment
+            : "";
+      const nextUrl = new URL(window.location.href);
+      nextUrl.hash = nextHash ? `#${nextHash}` : "";
+      window.history.replaceState(null, "", nextUrl.toString());
+    };
+
+    const applyHashFilter = () => {
+      const rawHash = window.location.hash.replace(/^#/, "").trim().toLowerCase();
+      if (!rawHash) {
+        return;
+      }
+
+      const mappedRoom = roomAliases[rawHash] || rawHash;
+      if (roomValues.has(mappedRoom)) {
+        activeRoom = mappedRoom;
+      } else if (departmentValues.has(rawHash)) {
+        activeDepartment = rawHash;
+      }
+    };
+
     departmentButtons.forEach((button) => {
       button.addEventListener("click", () => {
         activeDepartment = button.dataset.filterValue || "all";
         setActiveButton(departmentButtons, activeDepartment);
         applyFilters();
+        syncHashWithState();
       });
     });
 
@@ -143,12 +177,23 @@
         activeRoom = button.dataset.filterValue || "all";
         setActiveButton(roomButtons, activeRoom);
         applyFilters();
+        syncHashWithState();
       });
     });
 
+    applyHashFilter();
     setActiveButton(departmentButtons, activeDepartment);
     setActiveButton(roomButtons, activeRoom);
     applyFilters();
+
+    window.addEventListener("hashchange", () => {
+      activeDepartment = "all";
+      activeRoom = "all";
+      applyHashFilter();
+      setActiveButton(departmentButtons, activeDepartment);
+      setActiveButton(roomButtons, activeRoom);
+      applyFilters();
+    });
   }
 
   document.querySelectorAll("[data-year]").forEach((node) => {
