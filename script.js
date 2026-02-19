@@ -61,6 +61,96 @@
     }
   }
 
+  const catalogRoot = document.querySelector("[data-catalog-root]");
+  if (catalogRoot) {
+    const items = Array.from(catalogRoot.querySelectorAll("[data-catalog-item]"));
+    const departmentButtons = Array.from(
+      catalogRoot.querySelectorAll("[data-filter-kind='department']")
+    );
+    const roomButtons = Array.from(catalogRoot.querySelectorAll("[data-filter-kind='room']"));
+    const statusNode = catalogRoot.querySelector("[data-catalog-status]");
+    const emptyNode = catalogRoot.querySelector("[data-catalog-empty]");
+    const currentDepartmentNode = catalogRoot.querySelector("[data-current-department]");
+    const currentRoomNode = catalogRoot.querySelector("[data-current-room]");
+
+    let activeDepartment = "all";
+    let activeRoom = "all";
+
+    const getActiveLabel = (buttons, value, fallback) => {
+      const activeButton = buttons.find((button) => button.dataset.filterValue === value);
+      if (!activeButton) {
+        return fallback;
+      }
+      return (activeButton.textContent || "").trim();
+    };
+
+    const setActiveButton = (buttons, activeValue) => {
+      buttons.forEach((button) => {
+        const isActive = button.dataset.filterValue === activeValue;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+    };
+
+    const applyFilters = () => {
+      let visibleCount = 0;
+
+      items.forEach((item) => {
+        const departments = (item.dataset.department || "").split(/\s+/).filter(Boolean);
+        const rooms = (item.dataset.rooms || "").split(/\s+/).filter(Boolean);
+        const departmentMatch =
+          activeDepartment === "all" || departments.includes(activeDepartment);
+        const roomMatch = activeRoom === "all" || rooms.includes(activeRoom);
+        const visible = departmentMatch && roomMatch;
+
+        item.hidden = !visible;
+        if (visible) {
+          visibleCount += 1;
+        }
+      });
+
+      const departmentLabel = getActiveLabel(
+        departmentButtons,
+        activeDepartment,
+        "All Departments"
+      );
+      const roomLabel = getActiveLabel(roomButtons, activeRoom, "All Rooms");
+
+      if (currentDepartmentNode) {
+        currentDepartmentNode.textContent = departmentLabel;
+      }
+      if (currentRoomNode) {
+        currentRoomNode.textContent = roomLabel;
+      }
+      if (statusNode) {
+        statusNode.textContent = `Showing ${visibleCount} product${visibleCount === 1 ? "" : "s"}`;
+      }
+      if (emptyNode) {
+        emptyNode.hidden = visibleCount !== 0;
+      }
+    };
+
+    departmentButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activeDepartment = button.dataset.filterValue || "all";
+        setActiveButton(departmentButtons, activeDepartment);
+        applyFilters();
+      });
+    });
+
+    roomButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activeRoom = button.dataset.filterValue || "all";
+        setActiveButton(roomButtons, activeRoom);
+        applyFilters();
+      });
+    });
+
+    setActiveButton(departmentButtons, activeDepartment);
+    setActiveButton(roomButtons, activeRoom);
+    applyFilters();
+  }
+
   document.querySelectorAll("[data-year]").forEach((node) => {
     node.textContent = String(new Date().getFullYear());
   });
